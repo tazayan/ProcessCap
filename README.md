@@ -6,6 +6,8 @@ The launcher uses a Windows Job Object to apply a hard memory limit to the launc
 
 The application is implemented in one C# source file. It can run as a .NET 10 file-based app, or Windows PowerShell 5.1 and later.
 
+Unlike the **Number of processors** and **Maximum memory** options under **System Configuration (`msconfig`) > Boot > Advanced options**, which change resources available to the entire Windows system and require a computer restart, ProcessCap applies restrictions only to the selected application and its child processes. No restart is required, and limits can be changed between launches. This makes ProcessCap useful for quickly finding an application's practical lower CPU and memory boundaries before deciding whether to test corresponding system-level limitations.
+
 ## Files
 
 - `ProcessCap.cs` — complete file-based C# application.
