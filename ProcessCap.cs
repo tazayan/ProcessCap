@@ -606,12 +606,42 @@ namespace ProcessCap
         public int ThreadId;
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal struct OsVersionInfo
+    {
+        public uint Size;
+        public uint Major;
+        public uint Minor;
+        public uint Build;
+        public uint PlatformId;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+        public string ServicePack;
+    }
+
     internal static class NativeMethods
     {
         internal const uint Infinite = 0xFFFFFFFF;
         internal const uint WaitFailed = 0xFFFFFFFF;
 
         internal static WindowsVersionInfo GetWindowsVersionInfo()
+        {
+            try
+            {
+                return GetWindowsVersionInfoFromWinRt();
+            }
+            catch (Exception ex)
+            {
+                if (!(ex is FileNotFoundException) && !(ex is FileLoadException) && !(ex is TypeLoadException))
+                {
+                    throw;
+                }
+
+                return GetWindowsVersionInfoFromNativeApi();
+            }
+        }
+
+        private static WindowsVersionInfo GetWindowsVersionInfoFromWinRt()
         {
             const string AnalyticsInfoTypeName =
                 "Windows.System.Profile.AnalyticsInfo, Windows.System.Profile, ContentType=WindowsRuntime";
@@ -646,6 +676,25 @@ namespace ProcessCap
                 (int)((encodedVersion >> 32) & 0xFFFF),
                 (int)((encodedVersion >> 16) & 0xFFFF),
                 (int)(encodedVersion & 0xFFFF));
+        }
+
+        private static WindowsVersionInfo GetWindowsVersionInfoFromNativeApi()
+        {
+            OsVersionInfo version = new OsVersionInfo();
+            version.Size = (uint)Marshal.SizeOf(typeof(OsVersionInfo));
+            version.ServicePack = string.Empty;
+            int status = RtlGetVersion(ref version);
+            if (status < 0)
+            {
+                throw new InvalidOperationException(
+                    string.Format("Unable to query the native Windows version. NTSTATUS: 0x{0:X8}.", status));
+            }
+
+            return new WindowsVersionInfo(
+                checked((int)version.Major),
+                checked((int)version.Minor),
+                checked((int)version.Build),
+                0);
         }
 
         [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "ProcessCap validates Windows before calling this method.")]
@@ -686,6 +735,9 @@ namespace ProcessCap
 
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx status);
+
+        [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
+        private static extern int RtlGetVersion(ref OsVersionInfo versionInformation);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         internal static extern SafeJobHandle CreateJobObject(IntPtr attributes, string name);
