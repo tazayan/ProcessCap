@@ -69,7 +69,7 @@ dotnet run --file .\ProcessCap.cs
 You can also provide the full path from another directory:
 
 ```powershell
-dotnet run --file "full paht\ProcessCap.cs"
+dotnet run --file "fullpath"
 ```
 
 ## Run through PowerShell
@@ -84,7 +84,7 @@ The wrapper resolves `ProcessCap.cs` relative to its own location, compiles it i
 It can also be invoked from another working directory:
 
 ```powershell
-& "full paht\ProcessCap.ps1"
+& "fullpath"
 ```
 
 If the local PowerShell execution policy prevents the script from running, use a process-scoped bypass:
