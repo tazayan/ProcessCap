@@ -32,6 +32,32 @@ Confirm that a supported PowerShell version is installed when using the PowerShe
 $PSVersionTable.PSVersion
 ```
 
+## Install with WinGet
+
+ProcessCap is available from the Windows Package Manager Community Repository. Install it with:
+
+```powershell
+winget install --id tazayan.ProcessCap --exact
+```
+
+Upgrade to the latest published version with:
+
+```powershell
+winget upgrade --id tazayan.ProcessCap --exact
+```
+
+Uninstall ProcessCap with:
+
+```powershell
+winget uninstall --id tazayan.ProcessCap --exact
+```
+
+After installation, start the application from a terminal with:
+
+```powershell
+processcap
+```
+
 ## Run the C# version directly
 
 Open PowerShell in this directory and run:
