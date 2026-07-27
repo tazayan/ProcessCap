@@ -30,11 +30,6 @@ namespace ProcessCap
                     throw new PlatformNotSupportedException("ProcessCap requires Windows 10 or later.");
                 }
 
-                if (IntPtr.Size != 8)
-                {
-                    throw new PlatformNotSupportedException("ProcessCap requires a 64-bit process.");
-                }
-
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("\nProcessCap");
                 Console.WriteLine("----------------------------------------");
@@ -45,9 +40,12 @@ namespace ProcessCap
                 int totalMemoryMb = checked((int)(resources.TotalPhysicalMemoryBytes / BytesPerMebibyte));
                 int freeMemoryMb = checked((int)(resources.AvailablePhysicalMemoryBytes / BytesPerMebibyte));
                 int logicalProcessorCount = Environment.ProcessorCount;
-                int maximumAffinityProcessorCount = Math.Min(logicalProcessorCount, 64);
+                int processBitness = IntPtr.Size * 8;
+                int maximumAffinityProcessorCount = Math.Min(logicalProcessorCount, processBitness);
+                int maximumMemoryLimitMb = GetMaximumMemoryLimitMb(totalMemoryMb);
 
                 Console.WriteLine("OS: {0} build {1}", resources.Caption, resources.BuildNumber);
+                Console.WriteLine("Launcher architecture: {0}-bit", processBitness);
                 Console.WriteLine("Logical processors: {0}", logicalProcessorCount);
                 Console.WriteLine("Usable CPU affinity range: 1-{0} logical processor(s)", maximumAffinityProcessorCount);
                 Console.WriteLine("Physical memory: {0} MB total, {1} MB currently free\n", totalMemoryMb, freeMemoryMb);
@@ -61,8 +59,8 @@ namespace ProcessCap
                 string defaultDirectory = Path.GetDirectoryName(applicationPath);
                 string workingDirectory = ReadDirectory("Working directory", defaultDirectory);
                 int cpuLimit = ReadInt32("Logical processors to allow", 1, maximumAffinityProcessorCount, maximumAffinityProcessorCount);
-                int defaultMemoryLimitMb = Math.Max(256, Math.Min(freeMemoryMb, totalMemoryMb));
-                int memoryLimitMb = ReadInt32("Total memory limit in MB", 1, totalMemoryMb, defaultMemoryLimitMb);
+                int defaultMemoryLimitMb = Math.Min(maximumMemoryLimitMb, Math.Max(256, Math.Min(freeMemoryMb, totalMemoryMb)));
+                int memoryLimitMb = ReadInt32("Total memory limit in MB", 1, maximumMemoryLimitMb, defaultMemoryLimitMb);
 
                 if (memoryLimitMb > freeMemoryMb)
                 {
@@ -216,6 +214,19 @@ namespace ProcessCap
 
                 WriteColored(string.Format("Enter a value from {0} to {1}.", minimum, maximum), ConsoleColor.Yellow);
             }
+        }
+
+        private static int GetMaximumMemoryLimitMb(int totalMemoryMb)
+        {
+            if (IntPtr.Size == 4)
+            {
+                // JOBOBJECT_EXTENDED_LIMIT_INFORMATION uses SIZE_T for memory limits.
+                // A 32-bit launcher therefore cannot represent a value of 4 GiB or more.
+                int maximum32BitMb = (int)(uint.MaxValue / BytesPerMebibyte);
+                return Math.Min(totalMemoryMb, maximum32BitMb);
+            }
+
+            return totalMemoryMb;
         }
 
         private static void WriteColored(string text, ConsoleColor color)

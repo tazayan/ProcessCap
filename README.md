@@ -16,7 +16,7 @@ Unlike the **Number of processors** and **Maximum memory** options under **Syste
 ## Requirements
 
 - Windows 10 or later.
-- A 64-bit Windows installation.
+- Windows on x86, x64, or ARM64 hardware.
 - For direct C# file-app execution: .NET 10 SDK or later available through the `dotnet` command.
 - For PowerShell execution: Windows PowerShell 5.1 or later. The separate .NET SDK is not required.
 
@@ -127,10 +127,12 @@ dotnet build .\ProcessCap.cs -p:PublishAot=false -p:Nullable=disable
 
 Native AOT is disabled because the Windows version lookup uses runtime WinRT reflection. Nullable analysis is disabled for this build because the source intentionally remains compatible with the C# compiler included in Windows PowerShell 5.1.
 
-To publish a Windows x64 executable:
+To publish an executable for a specific Windows architecture, use its runtime identifier:
 
 ```powershell
 dotnet publish .\ProcessCap.cs -c Release -r win-x64 --self-contained true -p:PublishAot=false
+dotnet publish .\ProcessCap.cs -c Release -r win-x86 --self-contained true -p:PublishAot=false
+dotnet publish .\ProcessCap.cs -c Release -r win-arm64 --self-contained true -p:PublishAot=false
 ```
 
 To request a single-file executable:
@@ -141,9 +143,18 @@ dotnet publish .\ProcessCap.cs -c Release -r win-x64 --self-contained true -p:Pu
 
 The `dotnet publish` output reports the generated publish directory.
 
+To produce single-file builds for all three supported architectures in one operation:
+
+```powershell
+.\Publish-All.ps1
+```
+
+The builds are written to `artifacts\win-x86`, `artifacts\win-x64`, and `artifacts\win-arm64`.
+
 ## Important behavior
 
-- CPU affinity is limited to at most 64 logical processors by the current implementation.
+- CPU affinity is limited to at most 32 logical processors in an x86 launcher and 64 in an x64 or ARM64 launcher because Windows affinity masks are pointer-sized.
+- An x86 launcher can set a job-memory limit of at most 4095 MB because the native Windows structure uses a pointer-sized value. x64 and ARM64 builds do not have that restriction.
 - The memory value is a total Job Object memory limit shared by the launched application and its child processes.
 - Selecting a limit above currently available memory may cause the application to reach the limit sooner.
 - Raw application arguments are passed to the target executable exactly as entered.
